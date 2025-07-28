@@ -8,6 +8,8 @@
 
 #include <dm.h>
 #include <asm/global_data.h>
+#include <asm/gpio.h>
+#include <dm/ofnode_graph.h>
 #include <linux/printk.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/ch9.h>
@@ -22,6 +24,28 @@ static const char *const usb_dr_modes[] = {
 	[USB_DR_MODE_OTG]		= "otg",
 };
 
+static enum usb_dr_mode get_connector_drmode(ofnode node)
+{
+	ofnode conn = ofnode_graph_get_remote_node(node, -1, -1);
+	enum usb_dr_mode dr_mode = USB_DR_MODE_OTG;
+	struct gpio_desc id;
+
+	if (ofnode_valid(conn) &&
+	    ofnode_device_is_compatible(conn, "gpio-usb-b-connector") &&
+	    !gpio_request_by_name_nodev(conn, "id-gpios", 0, &id, GPIOD_IS_IN)) {
+		if (dm_gpio_get_value(&id))
+			dr_mode = USB_DR_MODE_PERIPHERAL;
+		else
+			dr_mode = USB_DR_MODE_HOST;
+		gpio_free_list_nodev(&id, 1);
+		log_debug("%s got dr_mode from connector %s dr_mode=%s\n", __func__,
+			  ofnode_get_name(node),
+			  dr_mode == USB_DR_MODE_HOST ? "host" : "peripheral");
+	}
+
+	return dr_mode;
+}
+
 enum usb_dr_mode usb_get_dr_mode(ofnode node)
 {
 	const char *dr_mode;
@@ -35,7 +59,7 @@ enum usb_dr_mode usb_get_dr_mode(ofnode node)
 
 	for (i = 0; i < ARRAY_SIZE(usb_dr_modes); i++)
 		if (!strcmp(dr_mode, usb_dr_modes[i]))
-			return i;
+			return (i == USB_DR_MODE_OTG) ?  get_connector_drmode(node) : i;
 
 	return USB_DR_MODE_UNKNOWN;
 }
