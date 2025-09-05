@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 Gateworks Corporation
+ */
+
+/dts-v1/;
+
+#include "imx95.dtsi"
+#include "imx95-catalina-gw900x.dtsi"
+#include "imx95-catalina-gw92xx.dtsi"
+
+/ {
+	model = "Gateworks Catalina GW92xx-0x i.MX95 Development Kit";
+	compatible = "gateworks,imx95-catalina-gw92xx-0x", "fsl,imx95";
+};

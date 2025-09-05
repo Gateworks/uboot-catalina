@@ -1,0 +1,188 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2025 Gateworks
+ */
+
+#include "imx95-u-boot.dtsi"
+
+&i2c2_gpio_expander_27 {
+	fsa1_pen {
+		gpio-hog;
+		output-high;
+		gpios = <0 GPIO_ACTIVE_HIGH>;
+		line-name = "fsa1_pen";
+	};
+
+	fsa2_pen {
+		gpio-hog;
+		output-high;
+		gpios = <1 GPIO_ACTIVE_HIGH>;
+		line-name = "fsa2_pen";
+	};
+
+	fsa1_present {
+		gpio-hog;
+		input;
+		gpios = <4 GPIO_ACTIVE_HIGH>;
+		line-name = "fsa1_present#";
+	};
+
+	fsa2_present {
+		gpio-hog;
+		input;
+		gpios = <5 GPIO_ACTIVE_HIGH>;
+		line-name = "fsa2_present#";
+	};
+
+	uart_term {
+		gpio-hog;
+		output-high;
+		gpios = <12 GPIO_ACTIVE_HIGH>;
+		line-name = "uart_term";
+	};
+
+	uart_rs485 {
+		gpio-hog;
+		output-low;
+		gpios = <13 GPIO_ACTIVE_HIGH>;
+		line-name = "uart_rs485";
+	};
+
+	uart_half {
+		gpio-hog;
+		output-high;
+		gpios = <14 GPIO_ACTIVE_HIGH>;
+		line-name = "uart_half";
+	};
+};
+
+&gpio3 {
+	dio0 {
+		gpio-hog;
+		input;
+		gpios = <26 GPIO_ACTIVE_HIGH>;
+		line-name = "dio0";
+	};
+
+	dio1 {
+		gpio-hog;
+		input;
+		gpios = <27 GPIO_ACTIVE_HIGH>;
+		line-name = "dio1";
+	};
+};
+
+/* DP83867 needs 1uS assertion and 195us post-delay */
+&ethphy0 {
+	reset-gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
+	reset-assert-us = <2>;
+	reset-deassert-us = <200>;
+};
+
+/* DP83867 needs 1uS assertion and 195us post-delay */
+&ethphy1 {
+	reset-gpios = <&gpio4 14 GPIO_ACTIVE_LOW>;
+	reset-assert-us = <2>;
+	reset-deassert-us = <200>;
+};
+
+/* AQR113 needs 100ms min for reset and 221ms min before MDIO access */
+&ethphy2 {
+	reset-gpios = <&gpio5 2 GPIO_ACTIVE_LOW>;
+	reset-assert-us = <110>;
+	reset-deassert-us = <250>;
+};
+
+&lpi2c2 {
+	bootph-pre-ram;
+};
+
+&pinctrl_lpi2c2 {
+	bootph-pre-ram;
+};
+
+&gsc {
+	bootph-pre-ram;
+};
+
+&lpuart1 {
+	bootph-pre-ram;
+};
+
+&reg_usdhc2_vmmc {
+	bootph-pre-ram;
+};
+
+&usb2 {
+	bootph-pre-ram;
+	dr_mode = "otg";
+};
+
+&usbphynop {
+	bootph-pre-ram;
+};
+
+&usb3 {
+	bootph-pre-ram;
+};
+
+&usb3_dwc3 {
+	bootph-pre-ram;
+};
+
+&usb3_phy {
+	bootph-pre-ram;
+};
+
+&usdhc1 {
+	bootph-pre-ram;
+};
+
+&usdhc2 {
+	bootph-pre-ram;
+};
+
+/* disable SDHC3 as we do not want it considered for boot */
+&usdhc3 {
+	status = "disabled";
+};
+
+&wdog3 {
+	status = "disabled";
+};
+
+&pinctrl_uart1 {
+	bootph-pre-ram;
+};
+
+&pinctrl_usdhc1 {
+	bootph-pre-ram;
+};
+
+&pinctrl_usdhc1_100mhz {
+	bootph-pre-ram;
+};
+
+&pinctrl_usdhc1_200mhz {
+	bootph-pre-ram;
+};
+
+&pinctrl_usdhc2 {
+	bootph-pre-ram;
+};
+
+&pinctrl_usdhc2_100mhz {
+	bootph-pre-ram;
+};
+
+&pinctrl_usdhc2_200mhz {
+	bootph-pre-ram;
+};
+
+&pinctrl_usdhc2_gpio {
+	bootph-pre-ram;
+};
+
+&pinctrl_reg_usdhc2_vmmc {
+	bootph-pre-ram;
+};

@@ -1,0 +1,6 @@
+i.MX95 Catalina BOARD
+M:	Tim Harvey <tharvey@gateworks.com>
+S:	Maintained
+F:	board/gateworks/catalina/
+F:	include/configs/imx95_catalina.h
+F:	configs/imx95_catalina_defconfig

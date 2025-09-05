@@ -1,0 +1,12 @@
+if TARGET_IMX95_CATALINA
+
+config SYS_BOARD
+	default "catalina"
+
+config SYS_VENDOR
+	default "gateworks"
+
+config SYS_CONFIG_NAME
+	default "catalina"
+
+endif
