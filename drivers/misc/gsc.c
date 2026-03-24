@@ -373,6 +373,10 @@ static int gsc_probe(struct udevice *dev)
 	struct gsc_priv *priv = dev_get_priv(dev);
 	u8 buf[32];
 	int ret;
+	int busno = GSC_BUSNO;
+
+	if (dev->parent)
+	       busno = dev_seq(dev->parent);
 
 	ret = gsc_i2c_read(dev, 0, buf, sizeof(buf));
 	if (ret)
@@ -386,10 +390,10 @@ static int gsc_probe(struct udevice *dev)
 	priv->gscver = memcmp(buf, buf + 16, 16) ? 3 : 2;
 	priv->fwver = buf[GSC_SC_FWVER];
 	priv->fwcrc = buf[GSC_SC_FWCRC] | buf[GSC_SC_FWCRC + 1] << 8;
-	priv->hwmon = gsc_get_dev(GSC_BUSNO, GSC_HWMON_ADDR);
+	priv->hwmon = gsc_get_dev(busno, GSC_HWMON_ADDR);
 	if (priv->hwmon)
 		dev_set_priv(priv->hwmon, priv);
-	priv->rtc = gsc_get_dev(GSC_BUSNO, GSC_RTC_ADDR);
+	priv->rtc = gsc_get_dev(busno, GSC_RTC_ADDR);
 	if (priv->rtc)
 		dev_set_priv(priv->rtc, priv);
 
