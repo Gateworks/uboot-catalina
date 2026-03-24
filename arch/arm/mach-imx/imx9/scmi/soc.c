@@ -477,7 +477,7 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 
 	num_of_macs = (val[1] >> 24) & 0xff;
 	if (num_of_macs <= (dev_id * 3)) {
-		printf("WARNING: no MAC address assigned for MAC%d\n", dev_id);
+//		printf("WARNING: no MAC address assigned for MAC%d\n", dev_id);
 		goto err;
 	}
 
@@ -518,7 +518,7 @@ void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 	return;
 err:
 	memset(mac, 0, 6);
-	printf("%s: fuse read err: %d\n", __func__, ret);
+//	printf("%s: fuse read err: %d\n", __func__, ret);
 }
 
 static char *rst_string[32] = {
