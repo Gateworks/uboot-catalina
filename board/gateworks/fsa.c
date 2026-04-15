@@ -32,10 +32,14 @@ static ofnode fsa_get_ofnode(int fsa)
 static int fsa_get_dtnode(void *fdt, int fsa)
 {
 	char str[32];
+	const char *alias;
 
 	/* by alias */
 	snprintf(str, sizeof(str), "fsa%d", fsa);
-	return fdt_path_offset(fdt, fdt_get_alias(fdt, str));
+	alias = fdt_get_alias(fdt, str);
+	if (alias)
+		return fdt_path_offset(fdt, alias);
+	return -EINVAL;
 }
 
 static const char * const fsa_gpio_config_names[] = { "NC", "", "input", "output-low",
