@@ -92,44 +92,79 @@ static void fsa_show_gpio_descs(const char *prefix, int fsa, struct fsa_board_in
 	}
 }
 
-/* detect gpio expander by address and deal with enabling/disabling/adding gpio expander to dt */
-static int fsa_get_gpiodev(int fsa, int addr, struct udevice **devp)
+static int fsa_remove_gpiodev(int fsa, int addr)
 {
 	struct udevice *bus, *dev;
 	char gpio_name[32];
+	ofnode node;
 	int ret;
 
-	ret = device_get_global_by_ofnode(fsa_get_ofnode(fsa), &bus);
+	debug("%s fsa%d addr=0x%02x\n", __func__, fsa, addr);
+	node = fsa_get_ofnode(fsa);
+	if (!ofnode_valid(node))
+		return -EINVAL;
+
+	ret = device_get_global_by_ofnode(node, &bus);
 	if (ret)
 		return ret;
 
 	sprintf(gpio_name, "gpio@%02x", addr);
 
-	/* probe device on i2c bus */
-	ret = dm_i2c_probe(bus, addr, 0, &dev);
-	switch (ret) {
-	case -EREMOTEIO: /* chip is not present on i2c bus */
-		/* if device is in dt remove/unbind/disable it */
-		ret = device_find_child_by_name(bus, gpio_name, &dev);
-		if (ret)
-			return ret;
-		ret = ofnode_set_enabled(dev_ofnode(dev), false);
-		if (ret)
-			return ret;
-		ret = device_unbind(dev);
-		if (ret)
-			return ret;
+	/* if device is in dt remove/unbind/disable it */
+	ret = device_find_child_by_name(bus, gpio_name, &dev);
+	if (ret)
+		return ret;
+	/* Remove it first (deactivate hardware) */
+	debug("device_remove %s/%s\n", dev->parent->name, dev->name);
+	if (device_active(dev)) {
 		ret = device_remove(dev, DM_REMOVE_NORMAL);
 		if (ret)
 			return ret;
+	}
+
+	/* Unbind it (destroy the software object) */
+	/* This removes it from 'dm tree' and the 'gpio' command list */
+	debug("device_unbind %s/%s\n", dev->parent->name, dev->name);
+	ret = device_unbind(dev);
+	if (ret)
 		return ret;
-	case -ENOSYS: /* chip found but driver invalid */
-		/* if device is in not in dt add/bind it */
+	debug("%s fsa%d addr=0x%02x ok\n", __func__, fsa, addr);
+
+	return 0;
+}
+
+/* detect gpio expander by address and deal with enabling/disabling/adding gpio expander to dt */
+static int fsa_get_gpiodev(int fsa, int addr, struct udevice **devp)
+{
+	struct udevice *bus, *dev;
+	int ret;
+
+	debug("%s fsa%d addr=0x%02x\n", __func__, fsa, addr);
+	ret = device_get_global_by_ofnode(fsa_get_ofnode(fsa), &bus);
+	if (ret)
 		return ret;
-	case 0: /* chip responded and driver bound */
+
+	/* probe device on i2c bus */
+	ret = dm_i2c_probe(bus, addr, 0, &dev);
+	switch (ret) {
+	/* chip is not present on i2c bus */
+	case -ETIMEDOUT:
+	case -EREMOTEIO:
+		fsa_remove_gpiodev(fsa, addr);
+		return ret;
+	/* chip found but driver invalid */
+	case -ENOSYS:
+		return ret;
+	/* chip responded and driver bound */
+	case 0:
 		break;
 	}
 
+	/* ensure this is a gpio device */
+	if (!gpio_get_ops(dev)) {
+		dev_err(dev, "is not a gpio device\n");
+		return -ENODEV;
+	}
 	if (devp)
 		*devp = dev;
 	return 0;
@@ -144,12 +179,14 @@ static int fsa_config_gpios(int fsa, struct fsa_user_info *info, int gpios, stru
 	int i, ret, flags;
 	char name[32];
 
+	debug("%s fsa%d gpios=%d %s\n", __func__, fsa, gpios, dev ? dev->name : "null");
 	/* configure GPIO's */
 	for (i = 0; i < gpios; i++) {
 		desc = &info->gpios[i];
 		if (desc->config < FSA_GPIO_INPUT)
 			continue;
 		memset(&gdesc, 0, sizeof(gdesc));
+		debug("%s fsa%d gpio%d 0x%02x\n", __func__, fsa, i, desc->source);
 
 		if (desc->source == 0xff) {
 			/* Board specific IMX8M GPIO's: find dev of controller by line-name */
@@ -315,19 +352,18 @@ static int fsa_detect(int fsa, struct fsa_board_info *board_info, struct fsa_use
 		      bool gpio)
 {
 	int ret;
+	int gpio_addr = 0x20;
 
+	debug("%s fsa%d config_gpio=%d\n", __func__, fsa, gpio);
 	ret = fsa_read_board_config(fsa, board_info);
-	if (ret)
+	if (ret) {
+		fsa_remove_gpiodev(fsa, gpio_addr);
 		return ret;
+	}
 	if (user_info) {
 		ret = fsa_read_user_config(fsa, user_info);
 		if (ret)
 			return ret;
-		/* detect port expander */
-		if (gpio && !fsa_get_gpiodev(fsa, 0x20, &fsa_gpiodevs[fsa]))
-			fsa_config_gpios(fsa, user_info,
-					 board_info->sockgpios + board_info->ioexpgpios,
-					 fsa_gpiodevs[fsa]);
 	}
 
 	return ret;
@@ -414,11 +450,26 @@ int fsa_init(void)
 	struct fsa_board_info board_info;
 	struct fsa_user_info user_info;
 	int fsa, ret;
+	int mask = 0;
 
+	debug("%s\n", __func__);
 	for (fsa = 1; fsa < FSA_MAX; fsa++) {
 		ret = fsa_detect(fsa, &board_info, &user_info, true);
-		if (!ret)
+		if (!ret) {
 			printf("FSA%d:  %s %s\n", fsa, board_info.model, user_info.desc);
+			mask |= BIT(fsa);
+		}
+	}
+	debug("%s detecting port expander\n", __func__);
+	int gpio_addr = 0x20;
+	for (fsa = 1; fsa < FSA_MAX; fsa++) {
+		if (mask & BIT(fsa))
+			fsa_get_gpiodev(fsa, gpio_addr, &fsa_gpiodevs[fsa]);
+	}
+	debug("%s config port expander\n", __func__);
+	for (fsa = 1; fsa < FSA_MAX; fsa++) {
+		if (mask & BIT(fsa))
+			fsa_config_gpios(fsa, &user_info, board_info.sockgpios + board_info.ioexpgpios, fsa_gpiodevs[fsa]);
 	}
 
 	return 0;
@@ -429,6 +480,7 @@ int fsa_show(void)
 	struct fsa_board_info board_info;
 	int fsa, ret;
 
+	debug("%s\n", __func__);
 	for (fsa = 1; fsa < FSA_MAX; fsa++) {
 		ret = fsa_detect(fsa, &board_info, NULL, false);
 		if (!ret) {
@@ -452,6 +504,7 @@ int fsa_ft_fixup(void *fdt)
 	ofnode node;
 	int off;
 
+	debug("%s\n", __func__);
 	/* iterate over FSA's and rename gpio's */
 	for (fsa = 1; fsa < FSA_MAX; fsa++) {
 		/* disable FSA ioexp node if disabled in controlling dt */
