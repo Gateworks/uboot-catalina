@@ -510,9 +510,10 @@ int fsa_ft_fixup(void *fdt)
 		/* disable FSA ioexp node if disabled in controlling dt */
 		off = fdt_subnode_offset(fdt, fsa_get_dtnode(fdt, fsa), "gpio@20");
 		if (off >= 0) {
+			debug("%s disabling fsa%d ioexp\n", __func__, fsa);
 			if (!fdt_get_path(fdt, off, path, sizeof(path))) {
 				node = ofnode_path(path);
-				if (ofnode_valid(node) && !ofnode_is_enabled(node))
+				if (ofnode_valid(node))
 					fdt_setprop_string(fdt, off, "status", "disabled");
 			}
 		}
