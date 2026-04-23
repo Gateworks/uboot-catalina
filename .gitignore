@@ -79,6 +79,7 @@ fit-dtb.blob*
 /keep-syms-lto.*
 /*imx8mimage*
 /*imx8mcst*
+/*imx9image*
 /*rcar4-sa0*
 /drivers/video/u_boot_logo.S
 /test/fdt_overlay/test-fdt-overlay-stacked.dtbo.S
