@@ -73,10 +73,10 @@ int board_late_init(void)
 	sprintf(env, "mmc dev %d", dev_no);
 	run_command(env, 0);
 
-	/* set board serial/model */
-	if (!env_get("serial#"))
-		env_set_ulong("serial#", eeprom_get_serial());
+	/* set board serial/model/dram (non overridable) */
+	env_set_ulong("serial#", eeprom_get_serial());
 	env_set("model", eeprom_get_model());
+	env_set("dram_cfg", eeprom_get_dram_config());
 
 	/* Set mac addrs */
 	i = 0;

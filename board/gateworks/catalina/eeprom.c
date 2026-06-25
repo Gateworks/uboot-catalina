@@ -23,6 +23,7 @@ struct catalina_board_info base_info;
 char catalina_model[64];
 char catalina_som_model[32];
 char catalina_baseboard_model[32];
+char catalina_dram_config[32];
 u32 catalina_serial;
 
 /* return a mac address from EEPROM info */
@@ -404,6 +405,19 @@ struct catalina_board_info *catalina_eeprom_init(int quiet)
 	if (rev_bom)
 		catalina_model[i++] = rev_bom;
 
+	/* dram config (currently based on total size only) */
+	switch((16 << som_info.sdram_size) / 1024) {
+	case 4:
+		strlcpy(catalina_dram_config, "4GB_1Gbx16_1R", sizeof(catalina_dram_config) - 1);
+		break;
+	case 8:
+		strlcpy(catalina_dram_config, "8GB_1Gbx16_2R", sizeof(catalina_dram_config) - 1);
+		break;
+	case 16:
+		strlcpy(catalina_dram_config, "16GB_2Gbx8_2R", sizeof(catalina_dram_config) - 1);
+		break;
+	}
+
 	/* fsa */
 	for (fsa = 1; fsa < FSA_MAX; fsa++) {
 		if (!fsa_eeprom_read(catalina_model, fsa, &fsa_info)) {
@@ -452,6 +466,11 @@ const char *eeprom_get_som_model(void)
 const char *eeprom_get_baseboard_model(void)
 {
 	return catalina_baseboard_model;
+}
+
+const char *eeprom_get_dram_config(void)
+{
+	return catalina_dram_config;
 }
 
 u32 eeprom_get_serial(void)
