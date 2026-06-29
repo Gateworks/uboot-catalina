@@ -155,7 +155,18 @@ int board_late_init(void)
 
 int board_phys_sdram_size(phys_size_t *size)
 {
-	*size = PHYS_SDRAM_SIZE + PHYS_SDRAM_2_SIZE;
+	u32 total_ram_gb = readl((void *)RAM_SIZE_SCRATCHPAD);
+	phys_size_t total_size;
+
+	if (total_ram_gb == 16) {
+		total_size = 16ULL * SZ_1G - 0x10000000ULL; // 15.75 GB
+	} else if (total_ram_gb == 8) {
+		total_size = 8ULL * SZ_1G - 0x10000000ULL;  // 7.75 GB
+	} else {
+		total_size = 4ULL * SZ_1G - 0x10000000ULL;  // 3.75 GB
+	}
+
+	*size = total_size;
 	return 0;
 }
 

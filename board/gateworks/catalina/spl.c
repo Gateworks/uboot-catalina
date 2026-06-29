@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/mu.h>
+#include <asm/io.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/mach-imx/ele_api.h>
 #include <asm/sections.h>
@@ -47,8 +48,11 @@ void gsc_init(void)
 		mdelay(1);
 	}
 	eeprom = catalina_eeprom_init(1);
-	if (eeprom)
-		printf("DRAM    : LPDDR5 %dGiB x%d\n", (16 << eeprom->sdram_size) / 1024, 8 << eeprom->sdram_width);
+	if (eeprom) {
+		int size_gb = (16 << eeprom->sdram_size) / 1024;
+		printf("DRAM    : LPDDR5 %dGiB\n", size_gb);
+		writel(size_gb, (void *)RAM_SIZE_SCRATCHPAD);
+	}
 }
 
 void spl_board_init(void)

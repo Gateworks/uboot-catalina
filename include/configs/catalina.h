@@ -15,9 +15,17 @@
 
 #define CFG_SYS_SDRAM_BASE		0x90000000
 #define PHYS_SDRAM				0x90000000
-/* Total 4GB */
+
+/* Bank 1 always spans from 0x90000000 up to the 4GB barrier.
+ * 0x70000000 equals exactly 1.75GB, leaving a 256MB hole for registers.
+ */
 #define PHYS_SDRAM_SIZE			0x70000000 /* 2GB - 256MB DDR */
-#define PHYS_SDRAM_2_SIZE		0x080000000 /* 2GB */
+
+/* Specify max 16GB profile size (14GB).
+ * This forces soc.c's imx9_mem_map[] table to safely provision page handles
+ * for the entire potential 64-bit physical layout.
+ */
+#define PHYS_SDRAM_2_SIZE		0x380000000 /* 14GB */
 
 #define WDOG_BASE_ADDR			WDG3_BASE_ADDR
 

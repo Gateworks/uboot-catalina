@@ -6,6 +6,8 @@
 #ifndef _CATALINA_EEPROM_H_
 #define _CATALINA_EEPROM_H_
 
+#define RAM_SIZE_SCRATCHPAD   (CFG_SYS_INIT_RAM_ADDR + CFG_SYS_INIT_RAM_SIZE - 0x100)
+
 struct catalina_board_info {
 	u8 mac[6];		/* 0x00: MAC base */
 	char equiv_dts[16];	/* 0x06: equivalent device-tree */
