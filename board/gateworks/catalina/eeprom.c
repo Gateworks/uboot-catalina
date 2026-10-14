@@ -3,6 +3,7 @@
  * Copyright 2026 Gateworks Corporation
  */
 
+#include <bloblist.h>
 #include <gsc.h>
 #include <hexdump.h>
 #include <i2c.h>
@@ -219,32 +220,32 @@ char get_pcb_rev(const char *str)
  */
 #define snprintfcat(dest, sz, fmt, ...) \
 	snprintf((dest) + strlen(dest), (sz) - strlen(dest), fmt, ##__VA_ARGS__)
-const char *eeprom_get_dtb_name(int level, char *buf, int sz)
+const char *eeprom_get_dtb_name(int level, char *buf, int sz, struct catalina_board_info *som, struct catalina_board_info *base)
 {
-	const char *pre = "imx95-catalina";
+	const char *pre = "imx95-catalina-gw";
 	int model, rev_pcb, rev_bom;
 
-	model = ((som_info.model[2] - '0') * 1000)
-		+ ((som_info.model[3] - '0') * 100)
-		+ ((som_info.model[4] - '0') * 10)
-		+ (som_info.model[5] - '0');
-	rev_pcb = tolower(get_pcb_rev(som_info.model));
-	rev_bom = get_bom_rev(som_info.model);
+	model = ((som->model[2] - '0') * 1000)
+		+ ((som->model[3] - '0') * 100)
+		+ ((som->model[4] - '0') * 10)
+		+ (som->model[5] - '0');
+	rev_pcb = tolower(get_pcb_rev(som->model));
+	rev_bom = get_bom_rev(som->model);
 
 	/* som + baseboard*/
-	if (base_info.model[0]) {
+	if (base->model[0]) {
 		/* baseboard id: 9100-9199->91; 9200-9299->92; etc */
-		int base = ((base_info.model[2] - '0') * 10) + (base_info.model[3] - '0');
+		int model_base = ((base->model[2] - '0') * 10) + (base->model[3] - '0');
 		/* som id: 9000-9019->1; 9020-9039->2; etc */
 		int som = ((model % 100) / 20) * 2;
-		int rev_base_pcb = tolower(get_pcb_rev(base_info.model));
-		int rev_base_bom = get_bom_rev(base_info.model);
+		int rev_base_pcb = tolower(get_pcb_rev(base->model));
+		int rev_base_bom = get_bom_rev(base->model);
 
-		snprintf(buf, sz, "%s%2dxx-%dx", pre, base, som);
+		snprintf(buf, sz, "%s%2dxx-%dx", pre, model_base, som);
 		/* GW99xx baseboards have no build options */
-		if (base == 99) {
-			base = (int)strtoul(base_info.model + 2, NULL, 10);
-			snprintf(buf, sz, "%s%4d-%dx", pre, base, som);
+		if (model_base == 99) {
+			model_base = (int)strtoul(base->model + 2, NULL, 10);
+			snprintf(buf, sz, "%s%4d-%dx", pre, model_base, som);
 		}
 		switch (level) {
 		case 0: /* full model (ie gw92xx-0x-a1a1) */
@@ -346,6 +347,16 @@ struct catalina_board_info *catalina_eeprom_init(int quiet)
 
 	/* read optional baseboard EEPROM */
 	eeprom_read(BASE_EEPROM_ADDR, &base_info);
+
+#ifdef CONFIG_SPL_BUILD
+	struct catalina_board_info *info;
+
+	info = bloblist_add(BLOB_BOARD_INFO, sizeof(*info) * 2, 0);
+	if (info) {
+		memcpy(&info[0], &som_info, sizeof(*info));
+		memcpy(&info[1], &base_info, sizeof(*info));
+	}
+#endif
 
 	/* create model strings */
 	if (base_info.model[0]) {

@@ -3,6 +3,7 @@
  * Copyright 2026 Gateworks Corporation
  */
 
+#include <bloblist.h>
 #include <env.h>
 #include <fdt_support.h>
 #include <init.h>
@@ -12,6 +13,7 @@
 #include <asm/gpio.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/mach-imx/sys_proto.h>
+#include <dm/root.h>
 #include <linux/mdio.h>
 #include <linux/delay.h>
 
@@ -46,6 +48,8 @@
 #define VEND1_THERMAL_PROV_HIGH_TEMP_WARN       0xc423
 #define VEND1_THERMAL_PROV_LOW_TEMP_WARN        0xc424
 
+static char dtb_name[64] __section(".data");
+
 int board_early_init_f(void)
 {
 	/* UART1: A55, UART2: M33, UART3: M7 */
@@ -77,6 +81,10 @@ int board_late_init(void)
 	env_set_ulong("serial#", eeprom_get_serial());
 	env_set("model", eeprom_get_model());
 	env_set("dram_cfg", eeprom_get_dram_config());
+
+	/* fdt file from our dtb match */
+	if (dtb_name[0])
+		env_set("fdtfile", dtb_name);
 
 	/* Set mac addrs */
 	i = 0;
@@ -170,19 +178,38 @@ int board_phys_sdram_size(phys_size_t *size)
 	return 0;
 }
 
-int board_fit_config_name_match(const char *path)
+int embedded_dtb_select(void)
 {
-	const char *name = path + strlen("freescale/");
-	static char init;
+	int ret, rescan;
+
+	ret = fdtdec_resetup(&rescan);
+	if (!ret && rescan) {
+		dm_uninit();
+		dm_init_and_scan(true);
+	}
+
+	return 0;
+}
+
+int board_fit_config_name_match(const char *name)
+{
+	struct catalina_board_info *som, *base, *blob;
 	const char *dtb;
 	char buf[32];
 	int i  = 0;
 
+	blob = bloblist_find(BLOB_BOARD_INFO, sizeof(*blob) * 2);
+	if (!blob) {
+		printf("failed getting bloblist\n");
+		return -1;
+	}
+	som = &blob[0];
+	base = &blob[1];
 	do {
-		dtb = eeprom_get_dtb_name(i++, buf, sizeof(buf));
-		if (!strcmp(dtb, name)) {
-			if (!init++)
-				printf("DTB     : %s\n", name);
+		dtb = eeprom_get_dtb_name(i++, buf, sizeof(buf), som, base);
+		if (dtb && !strcmp(dtb, name)) {
+			printf("DTB     : %s\n", name);
+			snprintf(dtb_name, sizeof(dtb_name), "%s.dtb", name);
 			return 0;
 		}
 	} while (dtb);

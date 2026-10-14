@@ -31,11 +31,14 @@ struct catalina_board_info *catalina_eeprom_init(int quiet);
 const char *eeprom_get_model(void);
 const char *eeprom_get_som_model(void);
 const char *eeprom_get_baseboard_model(void);
-const char *eeprom_get_dtb_name(int level, char *buf, int len);
+const char *eeprom_get_dtb_name(int level, char *buf, int len, struct catalina_board_info *, struct catalina_board_info *);
 const char *eeprom_get_dram_config(void);
 int eeprom_getmac(int index, uint8_t *enetaddr);
 uint32_t eeprom_get_serial(void);
 int get_bom_rev(const char *str);
 char get_pcb_rev(const char *str);
+
+/* bloblist for passing model data between SPl and U-Boot */
+#define BLOB_BOARD_INFO (BLOBLISTT_PRIVATE_AREA + 0x100)
 
 #endif
