@@ -146,18 +146,10 @@ static int fsa_get_gpiodev(int fsa, int addr, struct udevice **devp)
 
 	/* probe device on i2c bus */
 	ret = dm_i2c_probe(bus, addr, 0, &dev);
-	switch (ret) {
-	/* chip is not present on i2c bus */
-	case -ETIMEDOUT:
-	case -EREMOTEIO:
-		fsa_remove_gpiodev(fsa, addr);
+	if (ret) {
+		if (ret != -ENOSYS) /* chip found but driver invalid */
+			fsa_remove_gpiodev(fsa, addr);
 		return ret;
-	/* chip found but driver invalid */
-	case -ENOSYS:
-		return ret;
-	/* chip responded and driver bound */
-	case 0:
-		break;
 	}
 
 	/* ensure this is a gpio device */
