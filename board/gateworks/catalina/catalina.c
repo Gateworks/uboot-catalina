@@ -85,6 +85,8 @@ int board_late_init(void)
 	/* fdt file from our dtb match */
 	if (dtb_name[0])
 		env_set("fdtfile", dtb_name);
+	eeprom_get_dtb_name(-1, env, sizeof(env), NULL, NULL);
+		env_set("fdt_base", env);
 
 	/* Set mac addrs */
 	i = 0;

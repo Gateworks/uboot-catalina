@@ -225,6 +225,10 @@ const char *eeprom_get_dtb_name(int level, char *buf, int sz, struct catalina_bo
 	const char *pre = "imx95-catalina-gw";
 	int model, rev_pcb, rev_bom;
 
+	if (!som)
+		som = &som_info;
+	if (!base)
+		base = &base_info;
 	model = ((som->model[2] - '0') * 1000)
 		+ ((som->model[3] - '0') * 100)
 		+ ((som->model[4] - '0') * 10)
@@ -248,6 +252,8 @@ const char *eeprom_get_dtb_name(int level, char *buf, int sz, struct catalina_bo
 			snprintf(buf, sz, "%s%4d-%dx", pre, model_base, som);
 		}
 		switch (level) {
+		case -1: /* just base */
+			break;
 		case 0: /* full model (ie gw92xx-0x-a1a1) */
 			if (rev_base_bom)
 				snprintfcat(buf, sz, "-%c%d", rev_base_pcb, rev_base_bom);
