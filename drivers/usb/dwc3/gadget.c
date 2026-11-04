@@ -1424,19 +1424,27 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 
 	dwc3_gadget_dctl_write_safe(dwc, reg);
 
+	timeout = 500;
 	do {
-		udelay(2000);
 		reg = dwc3_readl(dwc->regs, DWC3_DSTS);
 		if (is_on) {
 			if (!(reg & DWC3_DSTS_DEVCTRLHLT))
 				break;
 		} else {
-			if (reg & DWC3_DSTS_DEVCTRLHLT)
+			if (reg & DWC3_DSTS_DEVCTRLHLT) {
 				break;
+			} else {
+				/* Clear any newly generated EndTransfer events */
+				u32 count = dwc3_readl(dwc->regs, DWC3_GEVNTCOUNT(0));
+				count &= DWC3_GEVNTCOUNT_MASK;
+				if (count)
+					dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(0), count);
+			}
 		}
 		timeout--;
 		if (!timeout)
 			return -ETIMEDOUT;
+		udelay(1);
 	} while (1);
 
 	dev_vdbg(dwc->dev, "gadget %s data soft-%s\n",
@@ -1447,6 +1455,7 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 	return 0;
 }
 
+static void dwc3_stop_active_transfers(struct dwc3 *dwc);
 static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 {
 	struct dwc3		*dwc = gadget_to_dwc(g);
@@ -1455,7 +1464,26 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 
 	is_on = !!is_on;
 
+	if (!is_on) {
+		/* Process any pending events before halting */
+		dwc3_gadget_uboot_handle_interrupt(dwc);
+	}
+
 	spin_lock_irqsave(&dwc->lock, flags);
+	if (!is_on) {
+		u32 count;
+
+		dwc3_stop_active_transfers(dwc);
+		/* Also stop active SETUP TRB on ep0/ep1 */
+		dwc3_stop_active_transfer(dwc, 0, true);
+		dwc3_stop_active_transfer(dwc, 1, true);
+
+		/* Acknowledge any remaining events so controller can halt */
+		count = dwc3_readl(dwc->regs, DWC3_GEVNTCOUNT(0));
+		count &= DWC3_GEVNTCOUNT_MASK;
+		if (count)
+			dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(0), count);
+	}
 	ret = dwc3_gadget_run_stop(dwc, is_on, false);
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
