@@ -44,3 +44,34 @@
 &pinctrl_usdhc1_200mhz {
 	bootph-pre-ram;
 };
+
+#ifdef CONFIG_SPL_USB_SDP_SUPPORT
+/* Note i.MX95 BOOT ROM supports SDP over USB1 (usb3 node) or USB2 (usb2 node) interface (not both)
+ * depending on the specific part number ordered (which is not detectable via markings or software)
+ */
+
+/* support SDP over USB1 interface */
+&usb3 {
+	bootph-pre-ram;
+	status = "okay";
+};
+
+&usb3_dwc3 {
+	bootph-pre-ram;
+	dr_mode = "peripheral";
+	status = "okay";
+};
+
+&usb3_phy {
+	bootph-pre-ram;
+	status = "okay";
+};
+
+/* support SDP over USB2 interface */
+&usb2 {
+	bootph-pre-ram;
+	dr_mode = "peripheral";
+	status = "okay";
+};
+#endif
+
