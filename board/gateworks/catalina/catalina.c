@@ -286,6 +286,20 @@ int board_init(void)
 	return 0;
 }
 
+uint mmc_get_env_part(struct mmc *mmc)
+{
+	if (!IS_SD(mmc)) {
+		switch (EXT_CSD_EXTRACT_BOOT_PART(mmc->part_config)) {
+		case EMMC_BOOT_PART_BOOT1:
+			return EMMC_HWPART_BOOT1;
+		case EMMC_BOOT_PART_BOOT2:
+			return EMMC_HWPART_BOOT2;
+		}
+	}
+
+	return 0;
+}
+
 int ft_board_setup(void *fdt, struct bd_info *bd)
 {
 	if (!env_get("serial#"))
